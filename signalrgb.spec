@@ -31,7 +31,10 @@
 #   - libbz2.so.1.0 (Fedora 45 rebuilds with soname libbz2.so.1)
 #   - libcurl.so.4(CURL_OPENSSL_4)
 #   - libtesseract.so.5 (Fedora 45 ships libtesseract.so.5.5)
-%global excluded_body lib((bz2\.so\.1\.0|tesseract\.so\.5)\(\)\(64bit\)|curl\.so\.4\(CURL_OPENSSL_4\)\(64bit\))
+# NOTE: rpm matches __requires_exclude against the dependency name WITHOUT the
+# trailing "()(64bit)" architectural adornment, so these must be prefix-based
+# (verified experimentally; suffix-exact patterns never match).
+%global excluded_body lib(bz2\.so\.1\.0|tesseract\.so\.5|curl\.so\.4\(CURL_OPENSSL_4\)).*
 
 %global upstream_deb signalrgb_%{version}-%{buildrev}_amd64.deb
 %global upstream_url https://pkgs.signalrgb.com/apt/pool/stable/main/s/signalrgb/%{upstream_deb}
