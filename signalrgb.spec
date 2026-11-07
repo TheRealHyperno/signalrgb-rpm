@@ -80,7 +80,6 @@ mkdir -p %{buildroot}
 cp -a data/. %{buildroot}/
 
 %files
-%dir /opt/signalrgb
 /opt/signalrgb
 /usr/bin/signalrgb
 /usr/share/applications/signalrgb.desktop
