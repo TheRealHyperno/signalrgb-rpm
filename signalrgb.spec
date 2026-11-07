@@ -1,0 +1,123 @@
+# Unofficial Fedora packaging of SignalRGB (https://signalrgb.com).
+#
+# SignalRGB does not ship a native RPM (their install.sh only supports Arch and
+# Debian/Ubuntu apt). This spec pulls the vendor's Ubuntu .deb directly from
+# their package server at build time, unwraps it, and republishes the payload
+# under the same paths the upstream packages use:
+#
+#   /opt/signalrgb/<app artillery>     app + bundled Qt6/ffmpeg/ICU (private, LD_LIBRARY_PATH)
+#   /usr/bin/signalrgb                 launcher shell shim
+#   /etc/udev/rules.d/72-signalrgb.rules
+#   /usr/share/applications/signalrgb.desktop
+#   /usr/share/icons/hicolor/, /usr/share/pixmaps/
+#
+# Bundled libraries are private (loaded via LD_LIBRARY_PATH from /opt/signalrgb/lib),
+# so we filter them out of both auto-Provides and auto-Requires and let rpm's
+# ELF dep generator pin real system sonames instead. This is deliberately NOT
+# Alien-style ldconfig repackaging.
+#
+# Distribution of the binary payload is governed by the SignalRGB end user
+# license agreement (https://signalrgb.com/eula). This package ships it
+# unmodified.
+
+%global buildrev 7617
+# Bundled sonames (in /opt/signalrgb/lib). Keep in sync with %__requires_exclude.
+%global bundled_sonames ^(libAppCore|libavcodec|libavformat|libavutil|libdatachannel|libgit2|libicudata|libicui18n|libicuuc|libQt6.*|libswresample|libswscale|libUltralight|libUltralightCore|libWebCore)\\.so
+
+%global upstream_deb signalrgb_%{version}-%{buildrev}_amd64.deb
+%global upstream_url https://pkgs.signalrgb.com/apt/pool/stable/main/s/signalrgb/%{upstream_deb}
+
+# sha256 of the pinned upstream .deb (from their apt repo Packages index)
+%global deb_sha256 5c8c29d193f75ff1d02874bbd32ca2b130b75a0312bb9d6fafea156b3da2599c
+
+# Vendor spends their own cryptographic bytes elsewhere; here we rely on:
+#  - pinned SHA256 of the source .deb above
+#  - no bundled-library Provides
+#  - exact soname Requires generated from the shipped ELF files
+%global debug_package %{nil}
+%global __brp_check_rpaths %{nil}
+%global __provides_exclude_from ^/opt/signalrgb/
+%global __requires_exclude %{bundled_sonames}
+
+Name:           signalrgb
+Version:        2.5.86
+Release:        %{buildrev}%{?dist}
+Summary:        Control and sync your RGB with one app
+License:        SignalRGB EULA
+URL:            https://signalrgb.com
+Source0:        %{upstream_url}
+ExclusiveArch:  x86_64
+
+Requires:       shadow-utils
+Requires:       systemd
+Requires:       systemd-udev
+# OCR text data for the tesseract dependency (upstream: tesseract-ocr-eng)
+Requires:       tesseract-langpack-eng
+
+Conflicts:      signalrgb <= 0
+
+%description
+SignalRGB (https://signalrgb.com) lets you control and sync your RGB devices
+from one application with game integrations and community effects.
+
+This is an UNOFFICIAL repackaging for Fedora/RHEL-family systems, built from
+the vendor's Ubuntu .deb. The application payload and bundled libraries are
+shipped unmodified under /opt/signalrgb. Use of the software remains subject
+to the SignalRGB EULA. Not affiliated with or endorsed by SignalRGB.
+
+%prep
+echo '%{deb_sha256}  %{_sourcedir}/%{upstream_deb}' | sha256sum -c -
+rm -rf data && mkdir data
+# Unwrap the .deb (ar) then unwrap the data payload (tar handles zstd/xz/gz
+# transparently, so the payload format may change across upstream versions).
+databall="$(ar t %{SOURCE0} | grep -E '^data\.tar\.' | head -n1)"
+ar p %{SOURCE0} "$databall" > data/tmp.tar
+tar -xf data/tmp.tar -C data
+rm -f data/tmp.tar
+
+%install
+mkdir -p %{buildroot}
+cp -a data/. %{buildroot}/
+
+%files
+%dir /opt/signalrgb
+/opt/signalrgb
+/usr/bin/signalrgb
+/usr/share/applications/signalrgb.desktop
+/usr/share/icons/hicolor
+/usr/share/pixmaps/signalrgb.png
+/etc/udev/rules.d/72-signalrgb.rules
+
+%post
+# The vendored udev rules reference Debian group names (plugdev, i2c). Fedora
+# does not ship these groups; create them if missing so GROUP= assignments do
+# not error out. Device access for the common cases comes from the uaccess tag
+# regardless (systemd-logind ACLs).
+getent group plugdev >/dev/null 2>&1 || groupadd -f -r plugdev || :
+getent group i2c >/dev/null 2>&1 || groupadd -f -r i2c || :
+
+if [ -x /usr/bin/udevadm ]; then
+  /usr/bin/udevadm control --reload-rules >/dev/null 2>&1 || :
+  /usr/bin/udevadm trigger >/dev/null 2>&1 || :
+fi
+
+if [ -x /usr/bin/gtk-update-icon-cache ]; then
+  /usr/bin/gtk-update-icon-cache -f -t /usr/share/icons/hicolor >/dev/null 2>&1 || :
+fi
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database /usr/share/applications >/dev/null 2>&1 || :
+fi
+
+%postun
+if [ -x /usr/bin/update-desktop-database ]; then
+  /usr/bin/update-desktop-database /usr/share/applications >/dev/null 2>&1 || :
+fi
+
+%changelog
+* Fri Nov 06 2026 Fiction Maintainer <auto@signalrgb-repack.local> - 2.5.86-7617
+- Initial RPM repackage from upstream Ubuntu .deb (2.5.86-7617).
+- /opt/signalrgb payload from vendor data.tar, unmodified.
+- Bundled Qt6/ffmpeg/ICU kept private via /opt/signalrgb; system soname deps
+  generated by rpmbuild.
+- udev rules installed to /etc/udev/rules.d/72-signalrgb.rules with rule
+  reload/trigger in %post.
