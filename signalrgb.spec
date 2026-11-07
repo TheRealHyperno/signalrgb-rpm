@@ -24,17 +24,18 @@
 # Body of the __requires_exclude alternation: bundled sonames (in
 # /opt/signalrgb/lib) plus Debian-only sonames/symbols Fedora ships
 # differently. Keep in sync with the Requires list below.
+# rpm matches this against the dependency name WITHOUT the trailing
+# "()(64bit)" adornment, and macro expansion eats "\(" escapes, so the
+# patterns use prefix matching and POSIX-safe [ ] sets exclusively.
+# (Both facts verified with disposable test-rpms.)
 #  Bundled (private Qt6/ffmpeg/ICU/etc):
-%global bundled_body lib(AppCore|Qt6.*|avcodec|avformat|avutil|datachannel|git2|icudata|icui18n|icuuc|swresample|swscale|Ultralight|UltralightCore|WebCore)\.so.*
+%global bundled_body lib(AppCore|Qt6|avcodec|avformat|avutil|datachannel|git2|icudata|icui18n|icuuc|swresample|swscale|Ultralight|UltralightCore|WebCore).*
 #  Debian-vs-Fedora divergences (see compat symlinks in %install for
 #  libbz2/libtesseract; Fedora's libcurl simply exports no symbol node):
 #   - libbz2.so.1.0 (Fedora 45 rebuilds with soname libbz2.so.1)
 #   - libcurl.so.4(CURL_OPENSSL_4)
 #   - libtesseract.so.5 (Fedora 45 ships libtesseract.so.5.5)
-# NOTE: rpm matches __requires_exclude against the dependency name WITHOUT the
-# trailing "()(64bit)" architectural adornment, so these must be prefix-based
-# (verified experimentally; suffix-exact patterns never match).
-%global excluded_body lib(bz2\.so\.1\.0|tesseract\.so\.5|curl\.so\.4\(CURL_OPENSSL_4\)).*
+%global excluded_body lib((bz2[.]so[.]1[.]0|tesseract[.]so[.]5)|curl[.]so[.]4[(]CURL_OPENSSL_4[)]).*
 
 %global upstream_deb signalrgb_%{version}-%{buildrev}_amd64.deb
 %global upstream_url https://pkgs.signalrgb.com/apt/pool/stable/main/s/signalrgb/%{upstream_deb}
