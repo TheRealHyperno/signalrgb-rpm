@@ -1,5 +1,7 @@
 # signalrgb-rpm
 
+[![upstream update check](https://github.com/TheRealHyperno/signalrgb-rpm/actions/workflows/check-upstream.yaml/badge.svg)](https://github.com/TheRealHyperno/signalrgb-rpm/actions/workflows/check-upstream.yaml)
+
 Unofficial Fedora/RPM packaging for [SignalRGB](https://signalrgb.com), built from
 the vendor's own Ubuntu `.deb` directly at build time. This was made because
 SignalRGB's official `install.sh` only supports Arch and Debian/Ubuntu repos.
