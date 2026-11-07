@@ -32,7 +32,6 @@
 #   - libcurl.so.4(CURL_OPENSSL_4)
 #   - libtesseract.so.5 (Fedora 45 ships libtesseract.so.5.5)
 %global excluded_body lib((bz2\.so\.1\.0|tesseract\.so\.5)\(\)\(64bit\)|curl\.so\.4\(CURL_OPENSSL_4\)\(64bit\))
-%global __requires_exclude ^(?:%{bundled_body}|%{excluded_body})$
 
 %global upstream_deb signalrgb_%{version}-%{buildrev}_amd64.deb
 %global upstream_url https://pkgs.signalrgb.com/apt/pool/stable/main/s/signalrgb/%{upstream_deb}
@@ -47,7 +46,7 @@
 %global debug_package %{nil}
 %global __brp_check_rpaths %{nil}
 %global __provides_exclude_from ^/opt/signalrgb/
-%global __requires_exclude ^(?:%{bundled_body}|%{excluded_body})$
+%global __requires_exclude ^(%{bundled_body}|%{excluded_body})$
 
 Name:           signalrgb
 Version:        2.5.86
