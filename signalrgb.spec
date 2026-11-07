@@ -79,9 +79,10 @@ SignalRGB (https://signalrgb.com) lets you control and sync your RGB devices
 from one application with game integrations and community effects.
 
 This is an UNOFFICIAL repackaging for Fedora/RHEL-family systems, built from
-the vendor's Ubuntu .deb. The application payload and bundled libraries are
-shipped unmodified under /opt/signalrgb. Use of the software remains subject
-to the SignalRGB EULA. Not affiliated with or endorsed by SignalRGB.
+the vendor's Ubuntu .deb payload, which is fetched unmodified from the vendor
+at build time (SHA256-pinned). Use of the software remains subject to the
+SignalRGB terms of service (https://signalrgb.com/terms/). Not affiliated
+with or endorsed by SignalRGB / Whirlwind Virtual Realities Inc.
 
 %prep
 echo '%{deb_sha256}  %{_sourcedir}/%{upstream_deb}' | sha256sum -c -

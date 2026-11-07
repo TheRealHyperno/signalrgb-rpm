@@ -1,0 +1,56 @@
+name: upstream-update-check
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # daily, 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare pinned vs latest upstream
+        id: diff
+        run: |
+          set +e
+          out=$(bash scripts/check-update.sh)
+          echo "$out"
+          echo "report<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$out" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          exit ${PIPESTATUS[0]:-$?}
+
+      - name: Open update issue when a new upstream version exists
+        if: steps.diff.outputs.report && contains(steps.diff.outputs.report, 'STATUS: update-available')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const report = `${{ steps.diff.outputs.report }}`;
+            const title = "New upstream SignalRGB release: " +
+              (report.match(/latest = (\S+)/) || [])[1];
+            // De-duplicate: skip if an open issue with the same title exists
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+            });
+            if (existing.data.some((i) => i.title === title)) {
+              console.log("Issue already open, skipping.");
+              return;
+            }
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body:
+                "Upstream released a new version.\n\n```\n" + report + "\n```\n\n" +
+                "Bump `Version` / `%global buildrev` / `%global deb_sha256` in `signalrgb.spec`.\n" +
+                "Re-check `%global bundled_body` / `excluded_body` if the bundled library set changed " +
+                "(extract the new payload and diff `ls opt/signalrgb/lib` against the old one).\n",
+            });
+            console.log("Issue opened.");

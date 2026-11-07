@@ -26,16 +26,20 @@ SignalRGB's official `install.sh` only supports Arch and Debian/Ubuntu repos.
 
 ## Updating to a new upstream version
 
-The version info in the spec (version, buildrev, sha256, soname filter list)
-must be bumped deliberately. Run:
+Version pinning is deliberate (reproducible builds, integrity check, no
+supply-chain surprises). To stay current:
 
-```sh
-./update.sh          # prints what to change; runs daemon-happily against the stable channel
-```
+- Automated: a daily CI workflow (`upstream-update-check.yml`) compares the
+  pinned version against SignalRGB's apt index and opens an issue when a new
+  release exists.
+- Manual: run `./scripts/check-update.sh` (same output as CI), or
+  `./update.sh [channel]` for the human-readable variant.
 
-Then edit `signalrgb.spec` accordingly and bump any of:
-- `Version:` and `%global buildrev`, `%global deb_sha256`
-- `%global bundled_sonames` (only if upstream ships/removes bundled libraries)
+Then edit `signalrgb.spec` accordingly:
+- `Version:`, `%global buildrev`, `Source0` URL, `%global deb_sha256`
+- if the bundled library set changed, refresh `%global bundled_body`
+  (diff `ls opt/signalrgb/lib` old vs new payload) and re-verify the
+  `excluded_body` set against the new ELF deps.
 
 Push to GitHub and COPR picks it up via webhook (source build), or kick a
 rebuild from the COPR UI.
@@ -57,9 +61,19 @@ dnf install signalrgb
 ## Notes
 
 - x86_64 only (SignalRGB's Linux builds are x86_64-only right now).
+- **Provenance & permissions:** the spec ships no SignalRGB binaries — builds
+  fetch the vendor's own Ubuntu `.deb` from `pkgs.signalrgb.com` at build time
+  (SHA256-pinned against their repo index) and repackage the payload
+  unmodified. No decompilation or source extraction is involved; packaging
+  metadata only. Distribution status is pending upstream confirmation
+  (SignalRGB/Whirlwind support was asked about a public RPM build; their
+  published terms restrict the Platform license to personal, non-commercial
+  use, which is why this repo deliberately hosts only packaging metadata and
+  lets each builder fetch the vendor payload directly, AUR-style).
 - License: the app payload is proprietary software distributed under the
-  [SignalRGB EULA](https://signalrgb.com/eula); it is shipped unmodified.
-  This repo is not affiliated with or endorsed by SignalRGB.
+  [SignalRGB terms](https://signalrgb.com/terms/); it is shipped unmodified.
+  This repo is not affiliated with or endorsed by SignalRGB ( Whirlwind
+  Virtual Realities Inc.).
 - Upstream's own AUR/APT packages were used as the reference for what the
   app actually needs at runtime; all soname dependencies are generated
   automatically from the shipped binaries.
