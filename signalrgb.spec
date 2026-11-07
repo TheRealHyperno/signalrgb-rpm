@@ -23,6 +23,13 @@
 %global buildrev 7617
 # Bundled sonames (in /opt/signalrgb/lib). Keep in sync with %__requires_exclude.
 %global bundled_sonames ^(libAppCore|libavcodec|libavformat|libavutil|libdatachannel|libgit2|libicudata|libicui18n|libicuuc|libQt6.*|libswresample|libswscale|libUltralight|libUltralightCore|libWebCore)\\.so
+# Sonames the vendor linked against Debian's naming/symbols that Fedora ships
+# differently; drop the soname-level Requires and pin the distro package instead
+# (see the compat symlinks/%install for libbz2 and libtesseract):
+#  - Debian soname libbz2.so.1.0; Fedora 45 rebuilds with soname libbz2.so.1
+#  - Debian libcurl exports symbol node CURL_OPENSSL_4; Fedora's does not
+#  - Debian soname libtesseract.so.5; Fedora 45 ships libtesseract.so.5.5
+%global excluded_sonames ^(libbz2\\.so\\.1\\.0|libcurl\\.so\\.4\\(CURL_OPENSSL_4\\)|libtesseract\\.so\\.5)\\(\\)\\(64bit\\)$
 
 %global upstream_deb signalrgb_%{version}-%{buildrev}_amd64.deb
 %global upstream_url https://pkgs.signalrgb.com/apt/pool/stable/main/s/signalrgb/%{upstream_deb}
@@ -37,7 +44,7 @@
 %global debug_package %{nil}
 %global __brp_check_rpaths %{nil}
 %global __provides_exclude_from ^/opt/signalrgb/
-%global __requires_exclude %{bundled_sonames}
+%global __requires_exclude ^(?:%{bundled_sonames}|%{excluded_sonames})$
 
 Name:           signalrgb
 Version:        2.5.86
@@ -51,6 +58,11 @@ ExclusiveArch:  x86_64
 Requires:       shadow-utils
 Requires:       systemd
 Requires:       systemd-udev
+# Package-level deps replacing the vendors' Debian soname Requires that
+# Fedora satisfies differently (see excluded_sonames above)
+Requires:       bzip2-libs
+Requires:       libcurl
+Requires:       tesseract-libs
 # OCR text data for the tesseract dependency (upstream: tesseract-ocr-eng)
 Requires:       tesseract-langpack-eng
 
@@ -78,6 +90,14 @@ rm -f data/tmp.tar
 %install
 mkdir -p %{buildroot}
 cp -a data/. %{buildroot}/
+
+# Compat with Fedora soname differences (private to the app: /opt/signalrgb/lib
+# is already first on the shim's LD_LIBRARY_PATH, so these shadow-less files
+# never leak into the system linker namespace).
+#   libbz2.so.1.0 -> libbz2.so.1     (Debian vs Fedora=45 rebuild soname)
+#   libtesseract.so.5 -> .so.5.5     (same)
+ln -s %{_libdir}/libbz2.so.1 %{buildroot}/opt/signalrgb/lib/libbz2.so.1.0
+ln -s %{_libdir}/libtesseract.so.5.5 %{buildroot}/opt/signalrgb/lib/libtesseract.so.5
 
 %files
 /opt/signalrgb
@@ -113,6 +133,11 @@ if [ -x /usr/bin/update-desktop-database ]; then
 fi
 
 %changelog
+* Sat Nov 07 2026 Fiction Maintainer <auto@signalrgb-repack.local> - 2.5.86-7617
+- Drop soname requires for libbz2.so.1.0 / libcurl.so.4(CURL_OPENSSL_4) /
+  libtesseract.so.5 (Debian-only naming or symbol versions); replace with
+  package-level requires (bzip2-libs, libcurl, tesseract-libs).
+- Add private /opt/signalrgb/lib compat symlinks (libbz2, libtesseract).
 * Fri Nov 06 2026 Fiction Maintainer <auto@signalrgb-repack.local> - 2.5.86-7617
 - Initial RPM repackage from upstream Ubuntu .deb (2.5.86-7617).
 - /opt/signalrgb payload from vendor data.tar, unmodified.
