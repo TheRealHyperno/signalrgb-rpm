@@ -3,7 +3,7 @@ name: upstream-update-check
 on:
   schedule:
     - cron: "0 6 * * *"   # daily, 06:00 UTC
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 permissions:
   contents: read
