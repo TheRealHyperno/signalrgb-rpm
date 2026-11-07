@@ -53,10 +53,9 @@ dnf install ~/path/to/signalrgb-2.5.86-*.rpm
 
 ## Installing from COPR
 
-```sh
-dnf copr enable <user>/signalrgb
-dnf install signalrgb
-```
+~~dnf copr enable <user>/signalrgb~~ — **not available**: upstream (SignalRGB/
+Whirlwind) has not authorized public redistribution of their Linux Beta
+payload. Build the RPM locally as described above instead.
 
 ## Notes
 
@@ -65,11 +64,11 @@ dnf install signalrgb
   fetch the vendor's own Ubuntu `.deb` from `pkgs.signalrgb.com` at build time
   (SHA256-pinned against their repo index) and repackage the payload
   unmodified. No decompilation or source extraction is involved; packaging
-  metadata only. Distribution status is pending upstream confirmation
-  (SignalRGB/Whirlwind support was asked about a public RPM build; their
-  published terms restrict the Platform license to personal, non-commercial
-  use, which is why this repo deliberately hosts only packaging metadata and
-  lets each builder fetch the vendor payload directly, AUR-style).
+  metadata only. As of 2026-11-07, a SignalRGB community moderator indicated
+  that publicly *distributing* build artifacts (e.g. a COPR repo) would not be
+  acceptable under the terms of service; this repo therefore supports
+  self-build (use locally, `rpmbuild -bb signalrgb.spec`) and does not publish
+  RPM artifacts. Re-confirm with upstream before re-distributing anything.
 - License: the app payload is proprietary software distributed under the
   [SignalRGB terms](https://signalrgb.com/terms/); it is shipped unmodified.
   This repo is not affiliated with or endorsed by SignalRGB ( Whirlwind
