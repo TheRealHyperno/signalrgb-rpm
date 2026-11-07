@@ -21,15 +21,18 @@
 # unmodified.
 
 %global buildrev 7617
-# Bundled sonames (in /opt/signalrgb/lib). Keep in sync with %__requires_exclude.
-%global bundled_sonames ^(libAppCore|libavcodec|libavformat|libavutil|libdatachannel|libgit2|libicudata|libicui18n|libicuuc|libQt6.*|libswresample|libswscale|libUltralight|libUltralightCore|libWebCore)\\.so
-# Sonames the vendor linked against Debian's naming/symbols that Fedora ships
-# differently; drop the soname-level Requires and pin the distro package instead
-# (see the compat symlinks/%install for libbz2 and libtesseract):
-#  - Debian soname libbz2.so.1.0; Fedora 45 rebuilds with soname libbz2.so.1
-#  - Debian libcurl exports symbol node CURL_OPENSSL_4; Fedora's does not
-#  - Debian soname libtesseract.so.5; Fedora 45 ships libtesseract.so.5.5
-%global excluded_sonames ^(libbz2\\.so\\.1\\.0|libcurl\\.so\\.4\\(CURL_OPENSSL_4\\)|libtesseract\\.so\\.5)\\(\\)\\(64bit\\)$
+# Body of the __requires_exclude alternation: bundled sonames (in
+# /opt/signalrgb/lib) plus Debian-only sonames/symbols Fedora ships
+# differently. Keep in sync with the Requires list below.
+#  Bundled (private Qt6/ffmpeg/ICU/etc):
+%global bundled_body lib(AppCore|Qt6.*|avcodec|avformat|avutil|datachannel|git2|icudata|icui18n|icuuc|swresample|swscale|Ultralight|UltralightCore|WebCore)\.so.*
+#  Debian-vs-Fedora divergences (see compat symlinks in %install for
+#  libbz2/libtesseract; Fedora's libcurl simply exports no symbol node):
+#   - libbz2.so.1.0 (Fedora 45 rebuilds with soname libbz2.so.1)
+#   - libcurl.so.4(CURL_OPENSSL_4)
+#   - libtesseract.so.5 (Fedora 45 ships libtesseract.so.5.5)
+%global excluded_body lib((bz2\.so\.1\.0|tesseract\.so\.5)\(\)\(64bit\)|curl\.so\.4\(CURL_OPENSSL_4\)\(64bit\))
+%global __requires_exclude ^(?:%{bundled_body}|%{excluded_body})$
 
 %global upstream_deb signalrgb_%{version}-%{buildrev}_amd64.deb
 %global upstream_url https://pkgs.signalrgb.com/apt/pool/stable/main/s/signalrgb/%{upstream_deb}
@@ -44,7 +47,7 @@
 %global debug_package %{nil}
 %global __brp_check_rpaths %{nil}
 %global __provides_exclude_from ^/opt/signalrgb/
-%global __requires_exclude ^(?:%{bundled_sonames}|%{excluded_sonames})$
+%global __requires_exclude ^(?:%{bundled_body}|%{excluded_body})$
 
 Name:           signalrgb
 Version:        2.5.86
@@ -96,8 +99,8 @@ cp -a data/. %{buildroot}/
 # never leak into the system linker namespace).
 #   libbz2.so.1.0 -> libbz2.so.1     (Debian vs Fedora=45 rebuild soname)
 #   libtesseract.so.5 -> .so.5.5     (same)
-ln -s %{_libdir}/libbz2.so.1 %{buildroot}/opt/signalrgb/lib/libbz2.so.1.0
-ln -s %{_libdir}/libtesseract.so.5.5 %{buildroot}/opt/signalrgb/lib/libtesseract.so.5
+ln -s ../../../usr/lib64/libbz2.so.1 %{buildroot}/opt/signalrgb/lib/libbz2.so.1.0
+ln -s ../../../usr/lib64/libtesseract.so.5.5 %{buildroot}/opt/signalrgb/lib/libtesseract.so.5
 
 %files
 /opt/signalrgb
